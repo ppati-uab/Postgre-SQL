@@ -1,0 +1,140 @@
+CREATE TABLE Department(
+	deptid int PRIMARY KEY,
+	dept_name varchar(50),
+	buidling_num varchar(10)  -- buidling_num ex. BDB, SCI001, etc.
+);
+
+\copy Department(deptid, dept_name, buidling_num) FROM '/home/UAB/joyroy/cs510/project/department.csv' DELIMITER ',' CSV HEADER;
+
+CREATE TABLE Employee(
+	empid int PRIMARY KEY,
+	deptid int,
+	name varchar(50) NOT NULL, -- INDEX
+	gender char(1),  -- M, F, U
+	age int,
+	birthdate date,
+	FOREIGN KEY(deptid) REFERENCES Department(deptid),
+	CHECK(gender in('M', 'F', 'U'))
+);
+
+ALTER TABLE Employee ADD CHECK(birthdate >= '1950-01-01' AND birthdate <= now())
+
+\copy Employee(empid, deptid, name, gender, birthdate) FROM '/home/UAB/joyroy/cs510/project/employee.csv' DELIMITER ',' CSV HEADER;
+
+CREATE TABLE Doctor (
+	empid int PRIMARY KEY,
+	speciality varchar(25),
+	FOREIGN KEY(empid) REFERENCES Employee(empid) ON DELETE CASCADE
+);
+
+\copy Doctor(empid, speciality) FROM '/home/UAB/joyroy/cs510/project/doc.csv' DELIMITER ',' CSV HEADER;
+
+
+CREATE TABLE Patient(
+	mrn int PRIMARY KEY,
+	name varchar(50) NOT NULL,
+	gender char(1),  -- M, F, U
+	age int,
+	birthdate date,
+	address varchar(50),
+	CHECK(gender in('M', 'F', 'U'))
+);
+
+CREATE TABLE PCP_Patient(
+	empid int,
+	mrn int,
+	PRIMARY KEY (empid, mrn),
+	FOREIGN KEY(empid) REFERENCES Employee(empid),
+	FOREIGN KEY(mrn) REFERENCES Patient(mrn)
+);
+
+\copy Patient(mrn, name, gender, birthdate, address) FROM '/home/UAB/joyroy/cs510/project/patient.csv' DELIMITER ',' CSV HEADER;
+
+CREATE TABLE Appointment(
+	apptid int PRIMARY KEY,
+	empid  int NOT NULL,
+	mrn int NOT NULL,
+	appt_date_time timestamp,
+	appt_type varchar(10),
+	appt_cost decimal(12, 2),
+	FOREIGN KEY(empid) REFERENCES Employee(empid),
+	FOREIGN KEY(mrn) REFERENCES Patient(mrn),
+	CHECK(appt_type in('in-person', 'virtual'))
+);
+
+ALTER TABLE Appointment ADD appt_status varchar(10);
+ALTER TABLE Appointment ADD CHECK(appt_status in ('Scheduled', 'Arrived', 'Cancelled', 'No-show'));
+ALTER TABLE Appointment ALTER appt_coSt SET DEFAULT 30.00;
+
+\copy Appointment(apptid, empid, mrn, appt_date_time, appt_type, appt_status) FROM '/home/UAB/joyroy/cs510/project/appointment.csv' DELIMITER ',' CSV HEADER;
+
+CREATE TABLE Diagnosis(
+	diagnosisid int,
+	apptid int,
+	diagnosis_date date,
+	diagnosis_name varchar(25),
+	dx_desc varchar(100),
+	PRIMARY KEY (diagnosisid, apptid),
+	FOREIGN KEY(apptid) REFERENCES Appointment(apptid)
+);
+
+\copy Diagnosis(diagnosisid, apptid, diagnosis_date, diagnosis_name, dx_desc) FROM '/home/UAB/joyroy/cs510/project/diagnosis.csv' DELIMITER ',' CSV HEADER;
+
+CREATE TABLE TestCost(
+	test_name varchar(25) PRIMARY KEY,
+	test_cost decimal(12, 2)
+);
+
+\copy TestCost(test_name, test_cost) FROM '/home/UAB/joyroy/cs510/project/test_cost.csv' DELIMITER ',' CSV HEADER;
+
+CREATE TABLE Test(
+	testid int,
+	apptid int,
+	test_name varchar(25),
+	test_result varchar(25),
+	PRIMARY KEY (testid, apptid),
+	FOREIGN KEY(apptid) REFERENCES Appointment(apptid)
+);
+
+ALTER TABLE Test ADD FOREIGN KEY(test_name) REFERENCES TestCost(test_name);
+
+\copy Test(testid, apptid, test_name, test_result) FROM '/home/UAB/joyroy/cs510/project/test.csv' DELIMITER ',' CSV HEADER;
+
+CREATE TABLE Medicine(
+	name varchar(25),
+	manufacturer varchar(25),
+	cost decimal(12, 2),
+	PRIMARY KEY (name, manufacturer)
+);
+
+\copy Medicine(name, manufacturer, cost) FROM '/home/UAB/joyroy/cs510/project/medicine.csv' DELIMITER ',' CSV HEADER;
+
+CREATE TABLE Prescription(
+	prescriptionid int PRIMARY KEY,
+	empid int NOT NULL,
+	mrn int NOT NULL,
+	prescribe_date date,
+	FOREIGN KEY(empid) REFERENCES Employee(empid),
+	FOREIGN KEY(mrn) REFERENCES Patient(mrn)
+);
+
+\copy Prescription(prescriptionid, empid, mrn, prescribe_date) FROM '/home/UAB/joyroy/cs510/project/prescription.csv' DELIMITER ',' CSV HEADER;
+
+
+
+CREATE TABLE PrescriptionMedicine(
+	prescriptionid int NOT NULL,
+	name varchar(25) NOT NULL,
+	manufacturer varchar(25) NOT NULL,
+	PRIMARY KEY (prescriptionid, name, manufacturer),
+	FOREIGN KEY(prescriptionid) REFERENCES Prescription(prescriptionid),
+	FOREIGN KEY(name, manufacturer) REFERENCES Medicine(name, manufacturer)
+);
+
+\copy PrescriptionMedicine(prescriptionid, name, manufacturer) FROM '/home/UAB/joyroy/cs510/project/prescription-medicine.csv' DELIMITER ',' CSV HEADER;
+
+
+
+
+
+
